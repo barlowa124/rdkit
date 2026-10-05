@@ -349,7 +349,7 @@ bool chiralAtomNeedsTagInversion(const RDKit::ROMol &mol,
                                  size_t numClosures) {
   PRECONDITION(atom, "bad atom");
   return atom->getDegree() == 3 &&
-         ((isAtomFirst && atom->getNumExplicitHs() == 1) ||
+         ((isAtomFirst && atom->getTotalNumHs() == 1) ||
           (!details::atomHasFourthValence(atom) && numClosures == 1 &&
            !details::isUnsaturated(atom, mol)));
 }
