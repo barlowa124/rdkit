@@ -6753,6 +6753,28 @@ TEST_CASE(
   rdWarningLog->ClearTee();
 }
 
+TEST_CASE("github #9675: mergeQueryHs preserves chirality") {
+  SmilesParserParams ps;
+  ps.removeHs = false;
+  std::unique_ptr<RWMol> m(SmilesToMol("[H][C@](C)(N)C(=O)O", ps));
+  REQUIRE(m);
+  REQUIRE(m->getAtomWithIdx(1)->getChiralTag() !=
+          Atom::ChiralType::CHI_UNSPECIFIED);
+  MolOps::mergeQueryHs(*m);
+  // the merged atom must still carry a chiral tag, adjusted if needed
+  // for the change in neighbor ordering
+  REQUIRE(m->getAtomWithIdx(0)->getChiralTag() !=
+          Atom::ChiralType::CHI_UNSPECIFIED);
+
+  SubstructMatchParameters ssp;
+  ssp.useChirality = true;
+  // L-alanine (S); the merged query must match it and not its mirror
+  auto lala = "C[C@@H](N)C(=O)O"_smiles;
+  auto dala = "C[C@H](N)C(=O)O"_smiles;
+  REQUIRE(SubstructMatch(*lala, *m, ssp).size() == 1);
+  REQUIRE(SubstructMatch(*dala, *m, ssp).empty());
+}
+
 TEST_CASE(
     "Testing github issue 908: AddHs() using 3D coordinates with 2D conformations") {
   constexpr const char *mb =
