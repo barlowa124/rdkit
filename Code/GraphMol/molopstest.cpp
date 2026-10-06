@@ -6773,6 +6773,36 @@ TEST_CASE("github #9675: mergeQueryHs preserves chirality") {
   auto dala = "C[C@H](N)C(=O)O"_smiles;
   REQUIRE(SubstructMatch(*lala, *m, ssp).size() == 1);
   REQUIRE(SubstructMatch(*dala, *m, ssp).empty());
+
+  SECTION("H last in the neighbor order: parity unchanged") {
+    // removing the last-listed neighbor takes zero swaps, so the tag
+    // itself must not flip
+    std::unique_ptr<RWMol> m2(
+        SmilesToMol("C[C@@](N)(C(=O)O)[H]", ps));
+    REQUIRE(m2);
+    auto before = m2->getAtomWithIdx(1)->getChiralTag();
+    REQUIRE(before != Atom::ChiralType::CHI_UNSPECIFIED);
+    MolOps::mergeQueryHs(*m2);
+    // the removed H was the last atom, so the stereo center keeps idx 1
+    REQUIRE(m2->getAtomWithIdx(1)->getChiralTag() == before);
+    REQUIRE(SubstructMatch(*lala, *m2, ssp).size() == 1);
+    REQUIRE(SubstructMatch(*dala, *m2, ssp).empty());
+  }
+
+  SECTION("chiral atom that is already a query") {
+    // no replaceAtom() on this path: the tag survives on the existing
+    // QueryAtom and the parity fixup still applies
+    std::unique_ptr<RWMol> m3(
+        SmartsToMol("[H][#6@](-[#6])(-[#7])-[#6](=[#8])-[#8]"));
+    REQUIRE(m3);
+    REQUIRE(m3->getAtomWithIdx(1)->getChiralTag() !=
+            Atom::ChiralType::CHI_UNSPECIFIED);
+    MolOps::mergeQueryHs(*m3);
+    REQUIRE(m3->getAtomWithIdx(0)->getChiralTag() !=
+            Atom::ChiralType::CHI_UNSPECIFIED);
+    REQUIRE(SubstructMatch(*lala, *m3, ssp).size() == 1);
+    REQUIRE(SubstructMatch(*dala, *m3, ssp).empty());
+  }
 }
 
 TEST_CASE(
