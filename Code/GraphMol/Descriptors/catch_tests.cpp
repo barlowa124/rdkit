@@ -701,6 +701,22 @@ TEST_CASE("DCLV") {
       CHECK(surfacePoints2[i].size() == surfacePoints[i].size());
     }
   }
+
+  SECTION("H-H polar surface") {
+    // github issue 9686: getPolarSurfaceArea(includeHs=true) recursed
+    // forever on molecules containing an H-H bond
+    auto m = v2::SmilesParse::MolFromSmiles("[H][H]");
+    REQUIRE(m);
+    auto *conf = new Conformer(m->getNumAtoms());
+    conf->setAtomPos(0, RDGeom::Point3D(0.0, 0.0, 0.0));
+    conf->setAtomPos(1, RDGeom::Point3D(0.74, 0.0, 0.0));
+    conf->set3D(true);
+    m->addConformer(conf, true);
+
+    Descriptors::DoubleCubicLatticeVolume dclv(*m);
+    CHECK(dclv.getPolarSurfaceArea(false, true) == 0.0);
+    CHECK(dclv.getPolarVolume(false, true) == 0.0);
+  }
 }
 #ifdef RDK_HAS_EIGEN3
 TEST_CASE("Github #7364: BCUT descriptors failing for moleucles with Hs") {

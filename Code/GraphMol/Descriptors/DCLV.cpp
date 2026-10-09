@@ -105,8 +105,12 @@ static bool includeAsPolar(const Atom *atm, const ROMol &mol, bool includeSandP,
       if (!includeHs) {
         return false;
       } else {
+        // check the neighbors' atomic numbers directly rather than
+        // recursing: an H bonded to another H would loop forever
         for (const auto nbr : mol.atomNeighbors(atm)) {
-          if (includeAsPolar(nbr, mol, includeSandP, includeHs)) {
+          const auto nbrZ = nbr->getAtomicNum();
+          if (nbrZ == 7 || nbrZ == 8 ||
+              (includeSandP && (nbrZ == 15 || nbrZ == 16))) {
             return true;
           }
         }
