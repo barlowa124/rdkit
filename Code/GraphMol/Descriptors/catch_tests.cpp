@@ -701,6 +701,42 @@ TEST_CASE("DCLV") {
       CHECK(surfacePoints2[i].size() == surfacePoints[i].size());
     }
   }
+
+  SECTION("masked atoms") {
+    // github issue 9684: zero-radius atoms (e.g. dummies) segfaulted
+    // getSurfaceArea() when they came first and changed the computed volume
+    // when they came last
+    std::vector<RDGeom::Point3D> pts = {
+        {0.0, 0.0, 0.0}, {1.5, 0.0, 0.0}, {2.0, 1.3, 0.0}, {8.0, 8.0, 8.0}};
+    auto addCoords = [&pts](RWMol &mol) {
+      auto *conf = new Conformer(mol.getNumAtoms());
+      for (unsigned int i = 0; i < mol.getNumAtoms(); i++) {
+        conf->setAtomPos(i, pts[i]);
+      }
+      conf->set3D(true);
+      mol.addConformer(conf, true);
+    };
+
+    auto m1 = v2::SmilesParse::MolFromSmiles("*C");
+    REQUIRE(m1);
+    addCoords(*m1);
+    Descriptors::DoubleCubicLatticeVolume dclv1(*m1);
+    CHECK(dclv1.getSurfaceArea() > 0.0);
+    CHECK(dclv1.getVolume() > 0.0);
+
+    auto m2 = v2::SmilesParse::MolFromSmiles("CCO");
+    auto m3 = v2::SmilesParse::MolFromSmiles("CCO*");
+    REQUIRE(m2);
+    REQUIRE(m3);
+    addCoords(*m2);
+    addCoords(*m3);
+    Descriptors::DoubleCubicLatticeVolume dclv2(*m2);
+    Descriptors::DoubleCubicLatticeVolume dclv3(*m3);
+    CHECK(dclv3.getSurfaceArea() ==
+          Catch::Approx(dclv2.getSurfaceArea()).epsilon(1e-10));
+    CHECK(dclv3.getVolume() ==
+          Catch::Approx(dclv2.getVolume()).epsilon(1e-10));
+  }
 }
 #ifdef RDK_HAS_EIGEN3
 TEST_CASE("Github #7364: BCUT descriptors failing for moleucles with Hs") {

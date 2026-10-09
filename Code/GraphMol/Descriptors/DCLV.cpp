@@ -157,7 +157,7 @@ struct State {
   std::vector<std::vector<unsigned int>> findNeighbours(
       const ROMol &mol, const std::vector<Point3D> &positions,
       const std::vector<double> &radii_, double probeRad, double maxRadius) {
-    std::vector<std::vector<unsigned int>> nbrs;
+    std::vector<std::vector<unsigned int>> nbrs(mol.getNumAtoms());
     std::vector<unsigned int> atomNeighbours;
 
     for (const auto atom : mol.atoms()) {
@@ -211,7 +211,7 @@ struct State {
           }
         }
       }
-      nbrs.push_back(atomNeighbours);
+      nbrs[atm_idx] = atomNeighbours;
     }
     return nbrs;
   }
@@ -279,16 +279,15 @@ DoubleCubicLatticeVolume::DoubleCubicLatticeVolume(
 
   for (const auto atom : mol.atoms()) {
     const unsigned int atomIdx = atom->getIdx();
-    numAtoms++;
 
     if (isProtein) {
       if (checkExcludedAtoms(atom, includeLigand)) {
         radii_[atomIdx] = 0.0;
-        numAtoms--;
       }
     }
 
     if (radii_[atomIdx] != 0.0) {
+      numAtoms++;
       const Point3D position = positions[atomIdx];
       // get sum over centres
       cXYZ.x += position.x;
